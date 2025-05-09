@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDOT Unit Price Trends</title>
+    <link rel="icon" type="image/png" href="Lamppost.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        // Initialize jsPDF global
+        window.jsPDF = window.jspdf.jsPDF;
+    </script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #f8fafc;
+            --accent: #3b82f6;
+            --dark-bg: #1e293b;
+            --dark-text: #f1f5f9;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 8px;
+            --transition: all 0.3s ease;
+            --ribbon-width: 300px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--secondary);
+            color: #333;
+            transition: var(--transition);
+            display: flex;
+        }
+
+        body.dark-mode {
+            background-color: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        /* Left Ribbon Styles */
+        .ribbon {
+            width: var(--ribbon-width);
+            height: 100vh;
+            background-color: white;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        body.dark-mode .ribbon {
+            background-color: #1a2234;
+            border-right-color: #2d3748;
+        }
+
+        .logo-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        body.dark-mode .logo-title {
+            border-bottom-color: #2d3748;
+        }
+
+        .logo-container {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            transition: var(--transition);
+        }
+
+        body.dark-mode .logo-container {
+            background: white;
+            padding: 4px;
+        }
+
+        .logo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        body.dark-mode h1 {
+            color: var(--dark-text);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: var(--ribbon-width);
+            flex: 1;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* Filter Groups in Ribbon */
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"], select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--radius);
+            font-size: 14px;
+            background-color: white;
+            transition: var(--transition);
+        }
+
+        body.dark-mode input[type="text"],
+        body.dark-mode select {
+            background-color: #334155;
+            color: var(--dark-text);
+            border-color: #475569;
+        }
+
+        /* Region Options */
+        .region-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .region-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Chart Type Radio Group */
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Analysis Options */
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            min-height: 400px;
+            position: relative;
+        }
+
+        #chart {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+        }
+
+        body.dark-mode .chart-container {
+            background-color: #334155;
+        }
+
+        /* Help Section */
+        .helpToggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: auto;
+            padding: 10px;
+            border-radius: var(--radius);
+            background-color: rgba(59, 130, 246, 0.1);
+            transition: var(--transition);
+        }
+
+        .helpToggle:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .helpToggle.active {
+            background-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .helpContent {
+            display: none;
+            padding: 15px;
+            background-color: white;
+            border-radius: var(--radius);
+            margin-top: 10px;
+            font-size: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        body.dark-mode .helpContent {
+            background-color: #334155;
+            color: var(--dark-text);
+        }
+
+        .helpContent.show {
+            display: block;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .ribbon {
+                width: 100%;
+                height: auto;
+                position: relative;
+                order: 1;
+            }
+
+            .main-content {
+                margin-left: 0;
+                order: 2;
+            }
+
+            body {
+                flex-direction: column;
+            }
+        }
+
+        /* External Link Buttons */
+        .external-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        body.dark-mode .external-links {
+            border-top-color: #2d3748;
+        }
+
+        .btn-link {
+            padding: 12px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+        }
+
+        .btn-website {
+            background-color: var(--primary);
+        }
+
+        .btn-website:hover {
+            background-color: #1e40af;
+        }
+
+        .btn-kofi {
+            background-color: #13C3FF;
+        }
+
+        .btn-kofi:hover {
+            background-color: #00b4eb;
+        }
+
+        /* Help Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .helpContent {
+            display: none;
+            background-color: white;
+            border-radius: var(--radius);
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        body.dark-mode .helpContent {
+            background-color: #1e293b;
+            color: var(--dark-text);
+        }
+
+        .helpContent.show {
+            display: block;
+        }
+
+        .helpContent h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        body.dark-mode .helpContent h2 {
+            color: var(--accent);
+        }
+
+        .helpContent h3 {
+            font-size: 18px;
+            margin: 20px 0 10px;
+            color: var(--primary);
+        }
+
+        body.dark-mode .helpContent h3 {
+            color: var(--accent);
+        }
+
+        .helpContent p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .helpContent ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .helpContent li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .close-help {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--primary);
+            padding: 5px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        body.dark-mode .close-help {
+            color: var(--accent);
+        }
+
+        .close-help:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode .close-help:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .help-section {
+            margin-bottom: 25px;
+        }
+
+        .help-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-results {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Left Ribbon -->
+    <div class="ribbon">
+        <div class="logo-title">
+            <div class="logo-container">
+                <img class="logo" src="Lamppost.png" alt="TDOT Logo">
+            </div>
+            <h1>TDOT Unit Price Trends</h1>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="payItem">Select a Pay Item:</label>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="showOldItems">
+                <label for="showOldItems">Show Pay Items Not Used Since 2020</label>
+            </div>
+            <select id="payItem">
+                <option value="">-- Select Item --</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label" for="trendLine">Trend Line:</label>
+            <select id="trendLine">
+                <option value="none">None</option>
+                <option value="linear">Linear</option>
+                <option value="exponential">Exponential</option>
+                <option value="polynomial">Polynomial</option>
+                <option value="moving">Moving Average</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Chart Type:</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="chartType" value="line" checked>
+                    Line
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="chartType" value="bar">
+                    Bar
+                </label>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Analysis Options:</label>
+            <div class="checkbox-group">
+                <label class="checkbox-option">
+                    <input type="checkbox" id="showPredictions">
+                    Show Price Predictions
+                </label>
+                <label class="checkbox-option">
+                    <input type="checkbox" id="showDifferentials">
+                    Show Regional Differentials
+                </label>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Region Selection:</label>
+            <div class="region-options">
+                <label class="region-option">
+                    <input type="checkbox" name="region" value="1" checked>
+                    Region 1
+                </label>
+                <label class="region-option">
+                    <input type="checkbox" name="region" value="2" checked>
+                    Region 2
+                </label>
+                <label class="region-option">
+                    <input type="checkbox" name="region" value="3" checked>
+                    Region 3
+                </label>
+                <label class="region-option">
+                    <input type="checkbox" name="region" value="4" checked>
+                    Region 4
+                </label>
+                <label class="region-option">
+                    <input type="checkbox" name="region" value="statewide" checked>
+                    Statewide
+                </label>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-export">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export to CSV
+            </button>
+            <button class="btn btn-report">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Generate Report
+            </button>
+        </div>
+
+        <div class="external-links">
+            <a href="https://roadsbyjack.com/" target="_blank" rel="noopener noreferrer" class="btn-link btn-website">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+                Roads by Jack
+            </a>
+            <a href="https://ko-fi.com/roadsbyjack" target="_blank" rel="noopener noreferrer" class="btn-link btn-kofi">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                    <line x1="6" y1="1" x2="6" y2="4"></line>
+                    <line x1="10" y1="1" x2="10" y2="4"></line>
+                    <line x1="14" y1="1" x2="14" y2="4"></line>
+                </svg>
+                Buy me a coffee
+            </a>
+        </div>
+
+        <div class="helpToggle">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Help & Instructions</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="chart-container">
+            <canvas id="chart"></canvas>
+            <div id="unitDisplay" class="unit-display"></div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay">
+        <div class="helpContent">
+            <button class="close-help">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+
+            <h2>TDOT Unit Price Trends Guide</h2>
+
+            <div class="help-section">
+                <h3>Quick Start</h3>
+                <p>This tool helps you analyze TDOT pay item price trends across different regions and years. Here's how to get started:</p>
+                <ol>
+                    <li>Use the search bar to find specific pay items by number or description</li>
+                    <li>Select a pay item from the dropdown menu</li>
+                    <li>The chart will automatically display price trends from 2000 to 2028</li>
+                </ol>
+            </div>
+
+            <div class="help-section">
+                <h3>Chart Features</h3>
+                <ul>
+                    <li><strong>Region Selection:</strong> Toggle different regions on/off to compare prices across Tennessee</li>
+                    <li><strong>Trend Lines:</strong> Choose from multiple trend line types:
+                        <ul>
+                            <li>Linear: Shows straight-line price trends</li>
+                            <li>Exponential: Better for prices that change at an increasing rate</li>
+                            <li>Polynomial: Captures more complex price patterns</li>
+                            <li>Moving Average: Smooths out short-term fluctuations</li>
+                        </ul>
+                    </li>
+                    <li><strong>Chart Types:</strong> Switch between line and bar charts for different visualizations</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>Advanced Analysis</h3>
+                <ul>
+                    <li><strong>Price Predictions:</strong> Enable to see projected future prices based on historical trends</li>
+                    <li><strong>Regional Differentials:</strong> View price differences between regions as percentages</li>
+                    <li><strong>Historical Data:</strong> Check "Show Old Items" to include items not used since 2020</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>Export Options</h3>
+                <ul>
+                    <li><strong>CSV Export:</strong> Download raw price data for further analysis</li>
+                    <li><strong>PDF Report:</strong> Generate a comprehensive report including:
+                        <ul>
+                            <li>Current prices and historical trends</li>
+                            <li>Price volatility analysis</li>
+                            <li>Regional price comparisons</li>
+                            <li>Future price projections</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>Tips</h3>
+                <ul>
+                    <li>Use dark mode for better visibility in low-light conditions</li>
+                    <li>Hover over data points to see exact values</li>
+                    <li>Click legend items to show/hide specific data series</li>
+                    <li>The chart shows data from 2000 to 2028, including future predictions when enabled</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
